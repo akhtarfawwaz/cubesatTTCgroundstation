@@ -29,7 +29,7 @@ def telemetry_thread():
                 global latest_telemetry
                 latest_telemetry = parsed
                 socketio.emit('telemetry', parsed)
-                print(f"[BACKEND] Emitted packet_id={parsed['packet_id']}")
+                print(f"[BACKEND] Emitted p_id={parsed['p_id']}")
 
 
 @app.route('/')

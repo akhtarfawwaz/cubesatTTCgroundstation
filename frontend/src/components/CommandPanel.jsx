@@ -7,7 +7,7 @@ function CommandPanel({ onSend }) {
     { id: 'beep', label: 'Buzzer', payload: { cmd_type: 3 } },
     { id: 'normal', label: 'Normal Mode', payload: { cmd_type: 1, value: 1 } },
     { id: 'safe', label: 'Safe Mode', payload: { cmd_type: 1, value: 0 } },
-    { id: 'calibrate', label: 'Calibrate IMU', payload: { cmd_type: 2 } },
+    { id: 'calibrate', label: 'Sensor Calibration', payload: { cmd_type: 2 } },
   ];
 
   const handleSend = (cmd) => {

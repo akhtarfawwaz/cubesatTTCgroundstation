@@ -47,7 +47,7 @@ function App() {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-      <Header connected={connected} packetId={telemetry?.packet_id} />
+      <Header connected={connected} packetId={telemetry?.p_id} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginTop: '20px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

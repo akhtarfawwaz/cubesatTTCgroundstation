@@ -1,6 +1,8 @@
 function GPSPanel({ telemetry }) {
   const lat = telemetry?.latitude;
   const lon = telemetry?.longitude;
+  const alt = telemetry?.gps_alt;
+  const sats = telemetry?.sats;
   const hasFix = lat !== undefined && lon !== undefined;
 
   return (
@@ -41,6 +43,18 @@ function GPSPanel({ telemetry }) {
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>LONGITUDE</p>
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '16px' }}>
             {hasFix ? lon.toFixed(6) : '--'}
+          </p>
+        </div>
+        <div>
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>GPS ALTITUDE</p>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '16px' }}>
+            {alt !== undefined ? `${alt} m` : '--'}
+          </p>
+        </div>
+        <div>
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>SATELLITES</p>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '16px' }}>
+            {sats !== undefined ? sats : '--'}
           </p>
         </div>
       </div>
