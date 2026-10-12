@@ -1,4 +1,23 @@
-backend/venv/
+# Python
 __pycache__/
+*.pyc
+venv/
+.venv/
+backend/venv/
+
+# Node / frontend build
 node_modules/
+dist/
+
+# PlatformIO build cache
+.pio/
+
+# Editor / tool-local settings
+.vscode/
+**/.claude/settings.local.json
+
+# Secrets
 .env
+
+# NOTE: Receiver/range_test_logs/ is deliberately NOT ignored.
+# Those CSVs are the raw measurement data cited in the thesis.

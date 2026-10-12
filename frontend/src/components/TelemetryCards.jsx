@@ -1,12 +1,31 @@
 function TelemetryCards({ telemetry }) {
+  // ALTITUDE is the Kalman-fused estimate, not the raw barometric reading —
+  // that is the value the OBC actually flies on. The raw one is kept beside it
+  // so a filter that has diverged is visible rather than hidden.
   const topCards = [
     { label: 'TEMPERATURE', value: telemetry?.temperature, unit: '°C' },
     { label: 'PRESSURE', value: telemetry?.pressure, unit: 'Pa' },
-    { label: 'ALTITUDE', value: telemetry?.altitude, unit: 'm' },
+    {
+      label: 'ALTITUDE',
+      value: telemetry?.alt_kf,
+      unit: 'm',
+      note: telemetry?.altitude !== undefined ? `raw ${telemetry.altitude} m` : null,
+    },
   ];
 
   const bottomCards = [
-    { label: 'VOLTAGE', value: telemetry?.volt, unit: 'V' },
+    // The EPS is outside this thesis's scope — the prototype runs off USB or a
+    // power bank and no divider is fitted, so the firmware transmits a fixed
+    // 3.70 (read_battery(), main.cpp). The field is kept because it is part of
+    // the ICD and proves the telemetry path carries it, but it is rendered
+    // muted and labelled so nobody reads a constant as a measurement.
+    {
+      label: 'BUS VOLTAGE',
+      value: telemetry?.volt,
+      unit: 'V',
+      muted: true,
+      note: 'placeholder — externally powered, not measured',
+    },
     {
       label: 'MODE',
       value: telemetry?.mode !== undefined
@@ -42,7 +61,9 @@ function TelemetryCards({ telemetry }) {
           fontFamily: 'var(--font-mono)',
           fontSize: '26px',
           fontWeight: 500,
-          color: card.label === 'ERROR CODE' && card.value !== 0
+          color: card.muted
+            ? 'var(--text-secondary)'
+            : card.label === 'ERROR CODE' && card.value !== 0
             ? 'var(--accent-amber)'
             : card.label === 'MODE' && telemetry?.mode === 1
             ? 'var(--accent-amber)'
@@ -54,6 +75,18 @@ function TelemetryCards({ telemetry }) {
           {card.unit}
         </span>
       </p>
+      {card.note && (
+        <p
+          style={{
+            fontSize: '11px',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--text-secondary)',
+            marginTop: '4px',
+          }}
+        >
+          {card.note}
+        </p>
+      )}
     </div>
   );
 

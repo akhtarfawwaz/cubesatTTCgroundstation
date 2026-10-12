@@ -1,4 +1,16 @@
-function Header({ connected, packetId }) {
+// A socket that is up says nothing about whether the satellite is still
+// transmitting, so the indicator distinguishes all three ways the chain can
+// break: the backend, the USB port, and the RF link itself.
+const LINK_STATES = {
+  live:        { text: 'LIVE',          color: 'var(--accent-green)',  pulse: true },
+  no_signal:   { text: 'NO SIGNAL',     color: 'var(--accent-amber)',  pulse: false },
+  serial_down: { text: 'SERIAL DOWN',   color: 'var(--accent-red)',    pulse: false },
+  offline:     { text: 'BACKEND OFFLINE', color: 'var(--accent-red)',  pulse: false },
+};
+
+function Header({ linkState, serialStatus, packetId, secondsSincePacket }) {
+  const state = LINK_STATES[linkState] || LINK_STATES.offline;
+
   return (
     <div
       style={{
@@ -41,25 +53,33 @@ function Header({ connected, packetId }) {
           </div>
         )}
 
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>LAST PACKET</p>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px' }}>
+            {secondsSincePacket === null ? '--' : `${secondsSincePacket.toFixed(0)}s ago`}
+          </p>
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span
             style={{
               width: '8px',
               height: '8px',
               borderRadius: '50%',
-              background: connected ? 'var(--accent-green)' : 'var(--accent-red)',
-              boxShadow: connected ? '0 0 8px var(--accent-green)' : 'none',
-              animation: connected ? 'pulse 2s infinite' : 'none',
+              background: state.color,
+              boxShadow: state.pulse ? `0 0 8px ${state.color}` : 'none',
+              animation: state.pulse ? 'pulse 2s infinite' : 'none',
             }}
           />
           <span
             style={{
               fontSize: '13px',
               fontFamily: 'var(--font-mono)',
-              color: connected ? 'var(--accent-green)' : 'var(--accent-red)',
+              color: state.color,
             }}
+            title={linkState === 'serial_down' ? serialStatus?.detail : undefined}
           >
-            {connected ? 'CONNECTED' : 'DISCONNECTED'}
+            {state.text}
           </span>
         </div>
       </div>

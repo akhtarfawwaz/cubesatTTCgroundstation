@@ -1,0 +1,3 @@
+timestamp,distance_m,notes,duration_s,pdr_pct,usable_pct,good,lost,crc_fail,parse_fail,expected,arrived,first_pid,last_pid,rssi_avg,rssi_min,rssi_max,snr_avg,snr_min,snr_max,cadence_s
+2026-08-12T10:50:20,10,"LOS; rebuilt offline from 10m data.csv (timestamp = file mtime, original run clock not retained)",54.2,100.0,100.0,23,0,0,0,23,23,485,507,-101.1,-109,-93,7.04,3.2,9.5,2.465
+2026-08-12T10:50:24,50,"LOS; rebuilt offline from 50m data.csv (timestamp = file mtime, original run clock not retained)",32.1,57.14,100.0,8,6,0,0,14,8,538,551,-115,-116,-113,-5.34,-7.8,-1.5,2.486
