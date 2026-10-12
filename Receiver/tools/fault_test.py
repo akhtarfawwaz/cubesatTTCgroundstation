@@ -208,8 +208,15 @@ class Runner:
 
         valid=True  -> ACK cmd_id (also overwrites last_cmd_id)
         valid=False -> NAK (-1) without touching last_cmd_id
+
+        The valid prime is a mode switch to Safe, NOT a beep. Priming with the
+        buzzer made every prime audible, so the operator heard prime beeps
+        before T1 and T2 and could not tell which beep belonged to T3. A mode
+        switch acks silently, gates nothing in the firmware (current_mode is
+        only reported in telemetry), and leaves mode at 1 so that T8's switch
+        to Normal is a real observable transition rather than a no-op.
         """
-        line = ">%d,3,150" % cmd_id if valid else ">%d,9,0" % cmd_id
+        line = ">%d,1,1" % cmd_id if valid else ">%d,9,0" % cmd_id
         want = cmd_id if valid else ACK_NAK
         self.s.drain()
         self.s.send(line)
@@ -264,6 +271,25 @@ class Runner:
             ok = len(frames) == 0
             detail = ("no frames in %.0f s" % window if ok
                       else "%d frame(s) arrived" % len(frames))
+        elif not frames:
+            # No telemetry at all. The satellite was off or out of range, so the
+            # test never ran -- that is not the same as the wrong ack coming
+            # back, and calling it FAIL would misreport a dead link as a
+            # firmware defect.
+            verdict = "NO LINK"
+            detail = "no telemetry frames arrived; satellite off or out of range"
+            print("   %-4s %-7s %s" % (tid, verdict, detail))
+            self.results.append({
+                "test": tid, "description": desc, "line_sent": line,
+                "raw_uplink": "yes" if raw else "no", "pc_time_sent": sent_at,
+                "expected": expect, "first_pid_after": "",
+                "acks_next_%d" % FRAMES_AFTER: "", "frames_seen": 0,
+                "lost_before_uplink": "", "lost_within_window": "",
+                "mode_seen": "", "beep_answer": "", "verdict": verdict,
+                "detail": detail,
+                "receiver_comments": " | ".join(comments)[:300],
+            })
+            return False
         else:
             ok = expect in acks
             detail = "ack %s in %s" % (expect, acks) if ok else \
@@ -312,7 +338,13 @@ def repetition(sess, results, rep, base, have_fault):
     # Establish a baseline p_id and make sure frames are flowing.
     f = sess.next_frame(timeout=12)
     if f is None:
-        print("   no telemetry — is the CubeSat powered and in range?")
+        # Grinding through nine tests with no link just produces nine NO LINK
+        # rows and wastes the operator's time, so stop and ask.
+        print("   NO TELEMETRY in 12 s. The CubeSat is off, out of range, or the")
+        print("   receiver is still in verbose mode. Check the serial log.")
+        if ask("   Continue anyway? [y/n, s=skip] ") != "y":
+            print("   repetition %d aborted" % (rep + 1))
+            return
     else:
         r.last_pid = f.p_id
         print("   link alive, p_id=%d ack=%d mode=%d" % (f.p_id, f.ack, f.mode))
@@ -418,9 +450,20 @@ def main():
         sess.send_key("c")                 # CSV output
         time.sleep(0.3)
         sess.send_key("h")                 # help banner reveals the build
-        time.sleep(1.0)
-        banner = sess.collect_comments()
-        have_fault = any("FAULT_TEST" in c for c in banner)
+        # Poll rather than sleep once: the receiver interleaves the help block
+        # with its own 1 s loop, so the FAULT_TEST line can land a second after
+        # the rest of the banner. A fixed sleep raced it and silently skipped
+        # T5-T7 on a correctly flashed board.
+        banner, have_fault = [], False
+        deadline = time.time() + 5.0
+        while time.time() < deadline:
+            new = sess.collect_comments()
+            banner += new
+            if any("FAULT_TEST" in c for c in banner):
+                have_fault = True
+                break
+            if not new:
+                time.sleep(0.2)
         print("receiver build: %s"
               % ("FAULT_TEST (raw uplink available)" if have_fault
                  else "normal -- T5/T6/T7 will be SKIPPED"))
