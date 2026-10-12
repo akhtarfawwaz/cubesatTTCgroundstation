@@ -596,6 +596,18 @@ char     up_buf[32] = {0};
 uint8_t  up_len     = 0;
 bool     up_reading = false;
 
+#ifdef FAULT_TEST
+// Fault-injection build only. A '!<text>' serial line is transmitted verbatim
+// as one LoRa uplink, bypassing the JSON builder and the CRC, so the
+// satellite's rejection paths can be exercised with frames no correct ground
+// station would ever emit. Compiled out of the normal receiver build, which
+// therefore cannot transmit anything unvalidated.
+bool     up_raw_pending = false;
+char     up_raw[128]    = {0};
+uint8_t  up_raw_len     = 0;
+bool     up_raw_reading = false;
+#endif
+
 const char* rssi_label(int r) {
   if (r > -60)  return "EXCELLENT";
   if (r > -80)  return "GOOD";
@@ -681,6 +693,9 @@ void print_help() {
   Serial.println("#        r = reset stats          s = summary now  h = this help");
   Serial.println("# uplink: >id,ct,param<enter>");
   Serial.println("#         ct 1=mode (param 2=normal, 1=safe)  2=calibrate  3=beep (param=ms)");
+#ifdef FAULT_TEST
+  Serial.println("# FAULT_TEST build: !<text><enter> transmits <text> verbatim, no CRC");
+#endif
   Serial.println("#");
 }
 
@@ -723,6 +738,21 @@ void send_uplink() {
   Serial.printf("# UPLINK_%s id=%ld ct=%d pm=%d | %s\n",
                 sent ? "TX" : "FAIL", (long)up_id, up_ct, up_pm, frame.c_str());
 }
+#ifdef FAULT_TEST
+
+// Transmits up_raw verbatim: no JSON, no CRC, no validation of any kind. Uses
+// the same call sequence and the same receive window as send_uplink(), so the
+// only thing the satellite can observe differently is the payload itself.
+void send_uplink_raw() {
+  LoRa.beginPacket();
+  LoRa.print(up_raw);
+  bool sent = LoRa.endPacket();
+
+  up_raw_pending = false;
+  Serial.printf("# RAW_%s %u B | %s\n", sent ? "TX" : "FAIL",
+                (unsigned)strlen(up_raw), up_raw);
+}
+#endif
 #endif  // IS_RECEIVER
 
 // ─────────────────────────────────────────────────────────────
@@ -866,6 +896,28 @@ void loop() {
   while (Serial.available()) {
     char ch = (char)Serial.read();
 
+#ifdef FAULT_TEST
+    // Raw uplink line: everything up to the newline is the payload, so no
+    // character is special and a deliberately malformed frame survives intact.
+    if (up_raw_reading) {
+      if (ch == '\n' || ch == '\r') {
+        up_raw[up_raw_len] = '\0';
+        up_raw_pending = up_raw_len > 0;
+        up_raw_reading = false;
+        if (up_raw_pending) {
+          Serial.printf("# RAW_QUEUED %u B | %s\n",
+                        (unsigned)up_raw_len, up_raw);
+        } else {
+          Serial.println("# RAW_FAIL empty payload");
+        }
+        up_raw_len = 0;
+      } else if (up_raw_len < sizeof(up_raw) - 1) {
+        up_raw[up_raw_len++] = ch;
+      }
+      continue;
+    }
+#endif
+
     if (up_reading) {
       if (ch == '\n' || ch == '\r') {
         up_buf[up_len] = '\0';
@@ -885,6 +937,9 @@ void loop() {
 
     switch (ch) {
       case '>': up_reading = true; up_len = 0;      break;
+#ifdef FAULT_TEST
+      case '!': up_raw_reading = true; up_raw_len = 0; break;
+#endif
       case 'v': case 'V': set_rx_mode(!rx_verbose); break;
       case 'c': case 'C': set_rx_mode(false);       break;
       case 'b': case 'B': set_rx_mode(true);        break;
@@ -932,6 +987,11 @@ void loop() {
   // the only moment it is listening. Sent before parsing so the JSON work
   // does not eat into the window. The FIFO has already been drained above,
   // so transmitting cannot clobber the packet we just read.
+#ifdef FAULT_TEST
+  // Fault frames go first and are mutually exclusive with a normal uplink in
+  // practice, since fault_test.py never queues both in one window.
+  if (up_raw_pending) send_uplink_raw();
+#endif
   if (up_pending) send_uplink();
 
   // Parse JSON
