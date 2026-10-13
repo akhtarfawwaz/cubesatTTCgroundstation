@@ -89,6 +89,9 @@ There are three different clocks in the data. Do not mix them in one time series
 | 28 Sep 2026 | `session_20260928_*.csv` | Command and dashboard checks. | Session summary |
 | 6 Oct 2026 | `session_20261006_170710.csv` | Command and dashboard checks. | Session summary |
 
+| 12 Oct 2026, 11:43–14:05 | `run_{distance}m_r{n}_*.csv`, `summary_100pkt.csv` | Repeated range test, 2 runs × 100 transmitted packets at 10, 50 and 100 m, corrected antenna installation (vertical), sunny, line of sight. Logger starts stopped within the first minute because the distance or run number was entered wrongly are not included. | Section 5.5.1, Table 5.6 |
+| 12 Oct 2026, 12:44–12:56 | `fault_test_*.csv` | Command fault tests (invalid, malformed, wrong CRC, duplicate, no satellite), 3 repetitions each, receiver built with `-D FAULT_TEST`. | Section 5.7, Table 5.9 |
+
 Separations for the bench and dashboard sessions were not recorded. Only the two range-test files are controlled distance measurements.
 
 ### Reproducing the thesis numbers
